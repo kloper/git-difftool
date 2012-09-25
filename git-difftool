@@ -1,0 +1,118 @@
+#!/usr/bin/python
+# 
+# 
+# Copyright (c) Dimitry Kloper <kloper@users.sf.net> 2002-2012
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+#  http://www.boost.org/LICENSE_1_0.txt)
+# 
+# git-difftool -- simple wrap around 'git diff' allowing to view the entire 
+#                 commit.
+# 
+
+import os
+import sys
+import shutil
+import string
+import subprocess
+import tempfile
+
+from optparse import OptionParser
+
+def launch(args, error_message):
+    popen = subprocess.Popen(
+        args=args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True)
+    (stdout, stderr) = popen.communicate()
+    rc = popen.wait()
+    if error_message and rc != 0:
+        print error_message 
+        print stdout
+        print stderr
+        sys.exit(1)
+    return (rc, stdout, stderr)
+
+script_full_path = os.path.realpath(__file__)
+script_name = os.path.basename(script_full_path)
+script_path = os.path.dirname(script_full_path)
+
+parser = OptionParser()
+parser.add_option("--diffmode", dest="diffmode",
+                  help="Run {0} in diff mode".format(script_name), 
+                  
+                  metavar="DIR")
+parser.add_option("--visual-diff", dest="vdiff",
+                  help="Run visual diff tool", 
+                  default="/s/WinMerge/WinMergeU.exe",
+                  metavar="FILE")
+
+(options, args) = parser.parse_args()
+
+if not options.diffmode:
+    diffrootdir = tempfile.mkdtemp(
+        prefix = (script_name + '-')
+        )    
+
+    launch( "git config --local difftool.{0}.cmd "
+            "'{1} --diffmode={2} $LOCAL $REMOTE $MERGED' ".
+            format(script_name, script_full_path, diffrootdir),
+            error_message = "Failed to configure git difftool: " )
+
+    launch( "git config --local difftool.{0}.prompt False ".format(script_name),
+            error_message = "Failed to configure git difftool.prompt: " )
+        
+    (rc, stdout, stderr) = launch( 
+        "git difftool --no-prompt --tool={0} {1}".
+        format(script_name, ' '.join(args)),
+        error_message = "Failed to run git difftool: ")
+
+    print stdout
+    print stderr
+    
+    local_dir = str(os.path.join(diffrootdir, 'local'))
+    remote_dir = str(os.path.join(diffrootdir, 'remote'))
+
+    print 'Local dir: {0}'.format(local_dir)
+    print 'Remote dir: {0}'.format(remote_dir)
+
+    if options.vdiff:       
+        if sys.platform == 'cygwin':
+            local_dir = '`cygpath -m "{0}"`'.format(local_dir)
+            remote_dir = '`cygpath -m "{0}"`'.format(remote_dir)
+
+        print 'Launching visual tool: "{0}" "{1}" "{2}"'.format(
+            options.vdiff, local_dir, remote_dir)
+
+        launch( '"{0}" "{1}" "{2}"'.
+                format(options.vdiff, local_dir, remote_dir),
+                error_message = "Failed to run visual diff: " )
+else:
+    diffrootdir = options.diffmode
+    (local, remote, merged) = args
+
+    local_dir = os.path.join(diffrootdir, 'local')
+    remote_dir = os.path.join(diffrootdir, 'remote')
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+    if not os.path.exists(remote_dir):
+        os.makedirs(remote_dir)
+
+    target_dir = os.path.dirname(merged)
+    target_name = os.path.basename(merged)
+    local_target_dir = os.path.join(local_dir, target_dir)
+    remote_target_dir = os.path.join(remote_dir, target_dir)
+    if not os.path.exists(local_target_dir):
+        os.makedirs(local_target_dir)
+    if not os.path.exists(remote_target_dir):
+        os.makedirs(remote_target_dir)
+    
+    local_target_name = os.path.join(local_target_dir, target_name)
+    remote_target_name = os.path.join(remote_target_dir, target_name)
+
+    shutil.copyfile(local, local_target_name)
+    shutil.copyfile(remote, remote_target_name)
+
+    print "cp {0} -> {1}".format(local, local_target_name)
+    print "cp {0} -> {1}".format(remote, remote_target_name)
