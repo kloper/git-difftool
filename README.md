@@ -31,6 +31,7 @@ How it works
 ============
 
 Here is the approximate algorithm: 
+
 1. Create a temporary directory (hereafter TMP)
 2. Configure a new difftool in the local repository. The new tool is
    git-difftool itself with the option --diffmode and the temporary
