@@ -13,8 +13,10 @@ http://www.boost.org/LICENSE_1_0.txt)
 Compatibility
 =============
 
-I have tried to make it as portable as I can, but I only tested it on cygwin
-with python 2.6. 
+Git 1.7.2 or greater is required.
+
+I have this working on cygwin and Ubunto 10 with git updated to 1.8.0 and python 2.6. 
+
 You may need to do some tweaking in order to adopt it for other systems.
 
 What it does
