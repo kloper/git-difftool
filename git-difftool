@@ -14,6 +14,7 @@ import os
 import sys
 import shutil
 import string
+import platform
 import subprocess
 import tempfile
 
@@ -38,6 +39,14 @@ script_full_path = os.path.realpath(__file__)
 script_name = os.path.basename(script_full_path)
 script_path = os.path.dirname(script_full_path)
 
+default_visual_diff = "meld" 
+system = platform.system()
+
+if system.find("CYGWIN") >= 0:
+    default_visual_diff = "/s/WinMerge/WinMergeU.exe"
+elif system.find("Windows") >= 0:
+    default_visual_diff = "WinMergeU.exe"
+
 parser = OptionParser()
 parser.add_option("--diffmode", dest="diffmode",
                   help="Run {0} in diff mode".format(script_name), 
@@ -45,7 +54,7 @@ parser.add_option("--diffmode", dest="diffmode",
                   metavar="DIR")
 parser.add_option("--visual-diff", dest="vdiff",
                   help="Run visual diff tool", 
-                  default="/s/WinMerge/WinMergeU.exe",
+                  default=default_visual_diff,
                   metavar="FILE")
 
 (options, args) = parser.parse_args()
@@ -78,7 +87,7 @@ if not options.diffmode:
     print 'Remote dir: {0}'.format(remote_dir)
 
     if options.vdiff:       
-        if sys.platform == 'cygwin':
+        if system.find('CYGWIN') >= 0:
             local_dir = '`cygpath -m "{0}"`'.format(local_dir)
             remote_dir = '`cygpath -m "{0}"`'.format(remote_dir)
 
